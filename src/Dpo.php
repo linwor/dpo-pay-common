@@ -4,10 +4,10 @@ namespace Dpo\Common;
 
 class Dpo
 {
-    protected static string $testApiUrl = 'https://secure.3gdirectpay.com/API/v6/';
-    protected static string $testPayUrl = 'https://secure.3gdirectpay.com/payv2.php';
-    protected static string $liveApiUrl = 'https://secure.3gdirectpay.com/API/v6/';
-    protected static string $livePayUrl = 'https://secure.3gdirectpay.com/payv2.php';
+    public static string $testApiUrl = 'https://secure.3gdirectpay.com/API/v6/';
+    public static string $testPayUrl = 'https://secure.3gdirectpay.com/payv2.php';
+    public static string $liveApiUrl = 'https://secure.3gdirectpay.com/API/v6/';
+    public static string $livePayUrl = 'https://secure.3gdirectpay.com/payv2.php';
     protected array $createResponses = [
         '000' => 'Transaction created',
         '801' => 'Request missing company token',
@@ -83,7 +83,15 @@ class Dpo
             </Service>
 POSTXML;
 
-        $customerPhone = preg_replace('/\D/', '', $data['customerPhone']);
+        $customerPhone             = preg_replace('/\D/', '', $data['customerPhone'] ?? '');
+        $data['customerDialCode']  = $data['customerDialCode'] ?? '';
+        $data['customerZip']       = $data["customerZip"] ?? '';
+        $data['customerCountry']   = $data['customerCountry'] ?? '';
+        $data['customerAddress']   = $data['customerAddress'] ?? '';
+        $data['customerCity']      = $data['customerCity'] ?? '';
+        $data['customerEmail']     = $data['customerEmail'] ?? '';
+        $data['customerFirstName'] = $data['customerFirstName'] ?? '';
+        $data['customerLastName']  = $data['customerLastName'] ?? '';
 
         $postXml = <<<POSTXML
         <?xml version="1.0" encoding="utf-8"?><API3G>
@@ -96,14 +104,22 @@ POSTXML;
         <customerDialCode>{$data['customerDialCode']}</customerDialCode>
         <customerZip>{$data['customerZip']}</customerZip>
         <customerCountry>{$data['customerCountry']}</customerCountry>
-        <customerFirstName></customerFirstName>
-        <customerLastName></customerLastName>
+        <customerFirstName>{$data['customerFirstName']}</customerFirstName>
+        <customerLastName>{$data['customerLastName']}</customerLastName>
         <customerAddress>{$data['customerAddress']}</customerAddress>
         <customerCity>{$data['customerCity']}</customerCity>
         <customerPhone>{$customerPhone}</customerPhone>
         <RedirectURL>{$data['redirectURL']}</RedirectURL>
         <BackURL>{$data['backURL']}</BackURL>
         <customerEmail>{$data['customerEmail']}</customerEmail>
+POSTXML;
+
+        if (!empty($data['PTL'])) {
+            $postXml .= "<PTL>{$data['PTL']}</PTL>";
+            $postXml .= "<PTLtype>{$data['PTLtype']}</PTLtype>";
+        }
+
+        $postXml .= <<<POSTXML
         </Transaction>
         <Services>$service</Services>
         </API3G>
@@ -131,11 +147,11 @@ POSTXML;
             );
             $response = curl_exec($curl);
             curl_close($curl);
-        } catch (Exception $exception) {
+        } catch (\Exception $exception) {
             $error .= "Curl error in createToken: " . $exception->getMessage();
         }
 
-        $xml = new SimpleXMLElement($response);
+        $xml = new \SimpleXMLElement($response);
 
         // Check if token creation response has been received
         if (!in_array($xml->xpath('Result')[0]->__toString(), array_keys($this->createResponses))) {
